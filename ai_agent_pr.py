@@ -2,8 +2,9 @@ import os
 import subprocess
 from pathlib import Path
 from groq import Groq
-from github import Github
+import time
 
+from github import Github, Auth
 # 1. Read CI error log
 ERROR_LOG = "error.log"
 
@@ -48,15 +49,16 @@ code = "\n".join(lines[1:])
 Path(filename).write_text(code)
 
 # 4. Create new git branch
-BRANCH = "ai-fix-branch"
 
+BRANCH = f"ai-fix-{int(time.time())}"
 subprocess.run(["git", "checkout", "-b", BRANCH])
 subprocess.run(["git", "add", filename])
 subprocess.run(["git", "commit", "-m", "AI fix: CI failure"])
 subprocess.run(["git", "push", "-u", "origin", BRANCH])
 
 # 5. Open Pull Request
-g = Github(os.environ["PAT_TOKEN"])
+auth = Auth.Token(os.environ["PAT_TOKEN"])
+g = Github(auth=auth)
 repo = g.get_repo(os.environ["GITHUB_REPOSITORY"])
 
 repo.create_pull(
