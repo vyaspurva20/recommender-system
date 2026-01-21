@@ -32,7 +32,7 @@ TASK:
 """
 
 response = client.chat.completions.create(
-    model="qwen-qwq-32b",
+    model="qwen/qwen‑2.5‑72b‑instruct",
     messages=[{"role": "user", "content": prompt}],
     temperature=0
 )
