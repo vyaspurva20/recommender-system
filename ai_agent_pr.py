@@ -64,11 +64,19 @@ g = Github(auth=auth)
 
 repo = g.get_repo(os.environ["GITHUB_REPOSITORY"])
 
-repo.create_pull(
-    title="AI Fix: CI failure",
-    body="This PR was generated automatically by llama via Groq.",
-    head=BRANCH,
-    base="main"
-)
+# repo.create_pull(
+#   title="AI Fix: CI failure",
+#  body="This PR was generated automatically by llama via Groq.",
+#    head=BRANCH,
+#    base="main"
+# )
+
+repo_url = os.environ["GITHUB_REPOSITORY"]
+
+print("AI FIX READY")
+print(" Branch pushed:", BRANCH)
+print(" Create PR manually:")
+print(f"https://github.com/{repo_url}/pull/new/{BRANCH}")
+
 
 print("Pull Request created successfully")
