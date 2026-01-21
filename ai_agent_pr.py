@@ -57,8 +57,11 @@ subprocess.run(["git", "commit", "-m", "AI fix: CI failure"])
 subprocess.run(["git", "push", "-u", "origin", BRANCH])
 
 # 5. Open Pull Request
-auth = Auth.Token(os.environ["PAT_TOKEN"])
+
+token = os.environ.get("PAT_TOKEN") or os.environ.get("GITHUB_TOKEN")
+auth = Auth.Token(token)
 g = Github(auth=auth)
+
 repo = g.get_repo(os.environ["GITHUB_REPOSITORY"])
 
 repo.create_pull(
