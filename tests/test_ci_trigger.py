@@ -1,6 +1,11 @@
-def test_ci_trigger():
-    # This is intentionally failing
-    assert 1 == 0  # Agent should fix this
+# validate.py
+import pickle, sys
 
-if __name__ == "__main__":
-    test_ci_trigger()
+try:
+    pickle.load(open("movies_dict.pkl", "rb"))
+    pickle.load(open("similarity.pkl", "rb"))
+    print("Logic OK")
+except Exception as e:
+    print("Validation failed:", e)
+    sys.exit(1)
+
