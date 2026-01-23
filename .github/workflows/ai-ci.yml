@@ -1,5 +1,7 @@
 name: Logic CI + AI Fix Agent
-
+permissions:
+  contents: write
+  pull-requests: write
 on:
   push:
   pull_request:
@@ -44,6 +46,10 @@ jobs:
         run: |
           git clone https://github.com/Kashish-0931/ai-ci-agent-service.git
 
+      -
+
+  
+
       - name: Run AI Fix Agent
         if: failure()
         env:
@@ -53,6 +59,7 @@ jobs:
         run: |
           pip install -r ai-ci-agent-service/requirements.txt
           python ai-ci-agent-service/ai_agent.py
+
 
 
 
