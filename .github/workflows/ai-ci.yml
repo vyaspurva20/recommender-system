@@ -48,6 +48,7 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.AGENT_REPO_TOKEN }}
-          repository: your-org/agent-repo
+          repository: Kashish-0931/universal-ci-fix-agent
           event-type: ci-failed
           client-payload: '{"repo": "${{ github.repository }}", "branch": "${{ github.ref }}"}'
+
