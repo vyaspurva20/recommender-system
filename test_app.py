@@ -21,3 +21,5 @@ def test_movies_pickle_loads():
     similarity = pickle.load(open("similarity.pkl", "rb"))
     assert len(movies) > 0
     assert len(similarity) > 0
+def test_fail():
+    assert 1==0
