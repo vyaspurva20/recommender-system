@@ -1,70 +1,25 @@
-name: Recommender CI with AI Agent
+name: CI Auto-Fix
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
-  validate:
+  ci_fix:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout repository
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
+      - name: Capture CI error log
         run: |
-          pip install -r requirements.txt
-          pip install pytest
+          # Example: run tests and capture log
+          pytest tests/ > ci.log 2>&1 || true
 
-      # 4️⃣ Run tests (do NOT stop workflow)
-      - name: Run pytest
-        id: pytest
+      - name: Send log to LLM agent
         run: |
-          set +e
-          pytest test_app.py --maxfail=1 --disable-warnings
-          echo $? > result_status.txt
-
-      # 5️⃣ Save error log
-      - name: Save error log
-        run: |
-          TEST_STATUS=$(cat result_status.txt)
-          if [ "$TEST_STATUS" != "0" ]; then
-            echo "Tests failed with exit code $TEST_STATUS" > error.log
-          else
-            echo "No errors" > error.log
-          fi
-
-      # 6️⃣ Upload error log artifact
-      - name: Upload error log artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: workflow-error-log
-          path: error.log
-
-      # 7️⃣ Notify AI agent repo ONLY if tests failed
-      - name: Notify AI agent repo
-        if: failure()
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.AGENT_REPO_TOKEN }}
-          repository: Kashish-0931/universal-ci-fix-agent
-          event-type: ci-failed
-          client-payload: |
-            {
-              "repo": "${{ github.repository }}",
-              "branch": "${{ github.ref_name }}",
-              "run_id": "${{ github.run_id }}"
-            }
-
-      # 8️⃣ Debug / completion log
-      - name: Show workflow completed
-        run: echo "Recommender CI completed. Agent notified if tests failed."
+          RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
+            -H "Content-Type: application/json" \
+            -d "{\"log\": \"$(cat ci.log | sed 's/"/\\"/g')\"}")
+          echo "LLM Agent Response: $RESPONSE"
