@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      # 4️⃣ Run tests (graceful fail)
+      # 4️⃣ Run tests (do NOT stop workflow)
       - name: Run pytest
         id: pytest
         run: |
@@ -33,39 +33,38 @@ jobs:
           pytest test_app.py --maxfail=1 --disable-warnings
           echo $? > result_status.txt
 
-      # 5️⃣ Save error log if tests fail
+      # 5️⃣ Save error log
       - name: Save error log
         run: |
           TEST_STATUS=$(cat result_status.txt)
           if [ "$TEST_STATUS" != "0" ]; then
             echo "Tests failed with exit code $TEST_STATUS" > error.log
           else
-            echo "" > error.log
+            echo "No errors" > error.log
           fi
 
-      # 6️⃣ Upload error log artifact (optional)
+      # 6️⃣ Upload error log artifact
       - name: Upload error log artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: workflow-error-log
           path: error.log
 
-      # 7️⃣ Trigger AI agent repo
+      # 7️⃣ Notify AI agent repo ONLY if tests failed
       - name: Notify AI agent repo
-        if: always()  # ensure agent runs even if tests fail
+        if: failure()
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.AGENT_REPO_TOKEN }}             # PAT with repo + workflow access
-          repository: Kashish-0931/universal-ci-fix-agent   # your agent repo
-          event-type: ci-failed                               # must match agent workflow
-          client-payload: >
+          token: ${{ secrets.AGENT_REPO_TOKEN }}
+          repository: Kashish-0931/universal-ci-fix-agent
+          event-type: ci-failed
+          client-payload: |
             {
               "repo": "${{ github.repository }}",
-              "branch": "${{ github.ref }}",
-              "error_artifact": "workflow-error-log"
+              "branch": "${{ github.ref_name }}",
+              "run_id": "${{ github.run_id }}"
             }
 
-      # 8️⃣ Debug step (optional)
+      # 8️⃣ Debug / completion log
       - name: Show workflow completed
-        run: echo "Recommender CI completed, AI agent notified if tests failed."
+        run: echo "Recommender CI completed. Agent notified if tests failed."
