@@ -1,15 +1,16 @@
-name: Test LLM Agent with error.py
+
+   name: Test LLM Agent with Dummy Error
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  test-error:
+  send-dummy-error:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -22,7 +23,7 @@ jobs:
           echo 'print(1/0)' > error.py
           echo "Dummy error.py created."
 
-      - name: Run error.py and capture log
+      - name: Run dummy error.py and capture log
         run: |
           if [ ! -f error.py ]; then
             echo "error.py not found!"
@@ -36,11 +37,11 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y jq
           jq -Rs '{log: .}' error.log > error.json
-          echo "JSON saved as error.json"
+          echo "Error JSON saved."
 
-      - name: Send log to dummy LLM Agent
+      - name: Send log to LLM Agent
         env:
-          AGENT_URL: https://httpbin.org/post
+          AGENT_URL: ${{ secrets.AGENT_URL }}
         run: |
           if [ -z "$AGENT_URL" ]; then
             echo "AGENT_URL not set!"
@@ -53,4 +54,7 @@ jobs:
 
           echo "=== LLM Agent Response ==="
           echo "$RESPONSE"
+
+          # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+
