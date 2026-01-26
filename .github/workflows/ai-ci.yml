@@ -9,13 +9,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+
+      - name: Create dummy error.py
+        run: |
+          echo 'print(1/0)' > error.py
+          echo "Dummy error.py created."
 
       - name: Run error.py and capture log
         run: |
@@ -24,40 +29,28 @@ jobs:
             exit 1
           fi
 
-          # Run the script and capture stdout + stderr
-          python error.py > error.log 2>&1
-          echo "Error log generated."
+          python error.py > error.log 2>&1 || true
+          echo "Error log captured."
 
-      - name: Convert log to safe JSON
+      - name: Convert log to JSON
         run: |
-          # Install jq if missing
-          if ! command -v jq &> /dev/null; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
+          sudo apt-get update && sudo apt-get install -y jq
+          jq -Rs '{log: .}' error.log > error.json
+          echo "JSON saved as error.json"
 
-          # Convert multi-line log into JSON
-          ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
-          echo "$ERROR_CONTENT" > error.json
-          echo "Error JSON saved."
-
-      - name: Send log to LLM Agent
+      - name: Send log to dummy LLM Agent
         env:
-          AGENT_URL: ${{ secrets.AGENT_URL }}
+          AGENT_URL: https://httpbin.org/post
         run: |
           if [ -z "$AGENT_URL" ]; then
             echo "AGENT_URL not set!"
             exit 1
           fi
 
-          # Send POST request to agent
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
             -d @error.json)
 
           echo "=== LLM Agent Response ==="
           echo "$RESPONSE"
-
-          # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
-
-
