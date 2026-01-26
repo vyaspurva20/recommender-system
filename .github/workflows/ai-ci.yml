@@ -51,7 +51,8 @@ jobs:
 
       - name: Send log to LLM Agent
         run: |
-          RESPONSE=$(curl -s -X POST "$AGENT_URL" \
+          RESPONSE=$(curl -s -X POST 
+           "https://universal-ci-fix-agent-2.onrender.com"
             -H "Content-Type: application/json" \
             -d @error.json)
 
@@ -59,3 +60,4 @@ jobs:
           echo "$RESPONSE"
 
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+
