@@ -26,10 +26,10 @@ jobs:
           pip install pandas
 
       # 4️⃣ Run recommender.py and capture error log
-      - name: Run recommender.py
+      - name: Run error.py
         run: |
           set +e  # continue even if script fails
-          python recommender.py 2> error.log || true
+          python  2> error.log error.py|| true
 
       # 5️⃣ Send error log to your LLM agent
       - name: Test LLM Agent
@@ -51,3 +51,4 @@ jobs:
           if (( $(echo "$CONF < 0.5" | bc -l) )); then
             echo "Warning: Low confidence from LLM agent"
           fi
+
