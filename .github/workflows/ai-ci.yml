@@ -41,7 +41,7 @@ jobs:
           ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
 
           # Send to LLM Agent
-          RESPONSE=$(curl -s -X POST "$AGENT_URL" \
+          RESPONSE=$(curl -s -X POST "$https://universal-ci-fix-agent-2.onrender.com" \
             -H "Content-Type: application/json" \
             -d "$ERROR_CONTENT")
 
@@ -58,6 +58,7 @@ jobs:
           if (( $(echo "$CONF < 0.5" | bc -l) )); then
             echo "Warning: Low confidence from LLM agent"
           fi
+
 
 
 
