@@ -9,58 +9,87 @@ permissions:
   pull-requests: write
 
 jobs:
-  ai-fix:
+  ai-ci-fix:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      # 1️⃣ Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
+      # 2️⃣ Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Run app and capture error
-      run: |
-        python main.py 2> error.log || true
+      # 3️⃣ Install deps (if present)
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
 
-    - name: Send error to AI agent
-      id: ai
-      run: |
-        RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
-          -H "Content-Type: application/json" \
-          -d "$(jq -n --arg log "$(cat error.log)" '{log: $log}')")
+      # 4️⃣ Run app and capture CI error
+      - name: Run app (capture error)
+        run: |
+          python main.py 2> error.log || true
 
-        echo "$RESPONSE"
+      # 5️⃣ Send error to AI agent
+      - name: Call AI CI Agent
+        id: ai
+        run: |
+          RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg log "$(cat error.log)" '{log: $log}')")
 
-        echo "filename=$(echo $RESPONSE | jq -r .filename)" >> $GITHUB_OUTPUT
-        echo "content<<EOF" >> $GITHUB_OUTPUT
-        echo "$(echo $RESPONSE | jq -r .content)" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+          echo "$RESPONSE"
 
-    - name: Apply AI fix
-      if: steps.ai.outputs.filename
-      run: |
-        echo "${{ steps.ai.outputs.content }}" > ${{ steps.ai.outputs.filename }}
+          FILE=$(echo "$RESPONSE" | jq -r '.files_changed[0]')
+          CONTENT=$(echo "$RESPONSE" | jq -r '.patch')
 
-    - name: Commit & push
-      if: steps.ai.outputs.filename
-      run: |
-        git config user.name "ci-agent"
-        git config user.email "ci-agent@users.noreply.github.com"
+          if [ "$FILE" = "null" ] || [ -z "$FILE" ]; then
+            echo "No fix generated"
+            exit 0
+          fi
 
-        git checkout -b ai-fix-${{ github.run_id }}
-        git add .
-        git commit -m "AI CI auto-fix"
-        git push origin HEAD
+          echo "file=$FILE" >> $GITHUB_OUTPUT
+          echo "patch<<EOF" >> $GITHUB_OUTPUT
+          echo "$CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-    - name: Create PR
-      if: steps.ai.outputs.filename
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        gh pr create \
-          --title "AI CI Fix" \
-          --body "Auto-generated CI fix" \
-          --base main
+      # 6️⃣ Apply patch
+      - name: Apply fix
+        if: steps.ai.outputs.file
+        run: |
+          echo "${{ steps.ai.outputs.patch }}" > "${{ steps.ai.outputs.file }}"
+
+      # 7️⃣ Commit & push fix
+      - name: Commit and push
+        if: steps.ai.outputs.file
+        run: |
+          git config user.name "ci-agent"
+          git config user.email "ci-agent@users.noreply.github.com"
+
+          BRANCH="ai-fix-${{ github.run_id }}"
+          git checkout -b "$BRANCH"
+          git add .
+          git commit -m "AI CI auto-fix"
+          git push origin "$BRANCH"
+
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      # 8️⃣ Create Pull Request (WORKING)
+      - name: Create Pull Request
+        if: steps.ai.outputs.file && github.actor != 'github-actions[bot]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "AI CI Fix" \
+            --body "Automatically generated fix by Universal CI Agent" \
+            --base main
+
+
 
 
