@@ -17,17 +17,25 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run error.py and save log
+      - name: Run error.py and capture log
         run: |
+          if [ ! -f error.py ]; then
+            echo "error.py not found!"
+            exit 1
+          fi
           python error.py > error.log 2>&1
           echo "Error log generated."
-          
-      - name: Convert log to JSON
-        run: |
-          ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
-          echo "error_content=$ERROR_CONTENT" >> $GITHUB_ENV
 
-      - name: Send to LLM Agent
+      - name: Convert log to safe JSON
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+          ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
+          echo "$ERROR_CONTENT" > error.json
+          echo "Error JSON saved."
+
+      - name: Send log to LLM Agent
         env:
           AGENT_URL: ${{ secrets.AGENT_URL }}
         run: |
@@ -36,15 +44,68 @@ jobs:
             exit 1
           fi
 
-          RESPONSE=$(curl -s -X POST "
-              https://universal-ci-fix-agent-2.onrender.com " \
+          RESPONSE=$(curl -s -X POST name: Test LLM Agent with error.py
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-error:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Run error.py and capture log
+        run: |
+          if [ ! -f error.py ]; then
+            echo "error.py not found!"
+            exit 1
+          fi
+          python error.py > error.log 2>&1
+          echo "Error log generated."
+
+      - name: Convert log to safe JSON
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+          ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
+          echo "$ERROR_CONTENT" > error.json
+          echo "Error JSON saved."
+
+      - name: Send log to LLM Agent
+        env:
+          AGENT_URL: ${{ secrets.AGENT_URL }}
+        run: |
+          if [ -z "$AGENT_URL" ]; then
+            echo "AGENT_URL not set!"
+            exit 1
+          fi
+
+          RESPONSE=$(curl -s -X POST 
+           "https://universal-ci-fix-agent-2.onrender.com/ci "\
             -H "Content-Type: application/json" \
-            -d "$error_content")
+            -d @error.json)
 
           echo "=== LLM Agent Response ==="
           echo "$RESPONSE"
 
+          # Save response for later steps
           echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+ \
+            -H "Content-Type: application/json" \
+            -d @error.json)
 
+          echo "=== LLM Agent Response ==="
+          echo "$RESPONSE"
 
-
+          # Save response for later steps
+          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
