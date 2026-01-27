@@ -23,11 +23,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run error.py and capture error
-        id: run_error
         run: |
           set -o pipefail
           python error.py 2>&1 | tee error.log
-        continue-on-error: true
 
       - name: Send error log to AI CI Agent
         if: failure()
@@ -35,7 +33,7 @@ jobs:
           AGENT_URL: https://universal-ci-fix-agent-2.onrender.com/ci
         run: |
           echo "Sending error log to AI agent..."
-          
+
           ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
 
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
@@ -45,11 +43,12 @@ jobs:
           echo "===== AI CI Agent Response ====="
           echo "$RESPONSE"
 
-      - name: Fail job if error occurred
+      - name: Mark CI as failed
         if: failure()
         run: |
-          echo "CI failed. AI agent suggestion shown above."
+          echo "CI failed — AI agent suggestion printed above."
           exit 1
+
 
 
 
