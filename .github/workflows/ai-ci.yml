@@ -1,53 +1,55 @@
-name: Test LLM Agent with Dummy Error
+name: AI CI Fix Agent (Recommender)
 
 on:
   push:
     branches: [ main ]
+  pull_request:
 
 jobs:
-  send-dummy-error:
+  ci-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.10"
 
-      - name: Create dummy error.py
+      - name: Install dependencies
         run: |
-          echo 'print(1/0)' > error.py
-          echo "Dummy error.py created."
+          pip install -r requirements.txt
 
-      - name: Run error.py and capture log
+      - name: Run error.py and capture error
+        id: run_error
         run: |
-          python error.py > error.log 2>&1 || true
-          echo "Error log captured."
+          set -o pipefail
+          python error.py 2>&1 | tee error.log
+        continue-on-error: true
 
-      - name: Convert log to JSON
+      - name: Send error log to AI CI Agent
+        if: failure()
+        env:
+          AGENT_URL: https://universal-ci-fix-agent-2.onrender.com/ci
         run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          jq -Rs '{log: .}' error.log > error.json
-          echo "Error JSON saved."
-
-      - name: Send log to LLM Agent directly
-        run: |
-          # Replace this with your actual LLM agent URL
-          AGENT_URL="https://universal-ci-fix-agent-2.onrender.com"
+          echo "Sending error log to AI agent..."
+          
+          ERROR_CONTENT=$(jq -Rs '{log: .}' < error.log)
 
           RESPONSE=$(curl -s -X POST "$AGENT_URL" \
             -H "Content-Type: application/json" \
-            -d @error.json)
+            -d "$ERROR_CONTENT")
 
-          echo "=== LLM Agent Response ==="
+          echo "===== AI CI Agent Response ====="
           echo "$RESPONSE"
 
-          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
-
-
+      - name: Fail job if error occurred
+        if: failure()
+        run: |
+          echo "CI failed. AI agent suggestion shown above."
+          exit 1
 
 
 
