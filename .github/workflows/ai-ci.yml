@@ -11,34 +11,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # 1️⃣ Checkout repo
     - name: Checkout repo
       uses: actions/checkout@v3
 
+    # 2️⃣ Setup Python
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
 
+    # 3️⃣ Install dependencies
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pandas requests
 
-    - name: Run error.py and capture errors
+    # 4️⃣ Run script and CAPTURE failure properly
+    - name: Run error.py
+      id: run_script
       run: |
-        set -o pipefail
-        python error.py 2>&1 | tee error.log || true  # always continue even if error
+        python error.py
 
-    - name: Send error log to AI CI Agent
+    # 5️⃣ Call CI Bot Agent ONLY if failure happens
+    - name: Call CI Bot Agent to fix error
+      if: failure()
+      env:
+        GH_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
       run: |
-        echo "Sending error log to AI agent..."
-        # Use jq to properly escape log as JSON string
-        LOG=$(jq -Rs '.' error.log)
-        RESPONSE=$(curl -s -X POST https://universal-ci-fix-agent-2.onrender.com/ci \
-          -H "Content-Type: application/json" \
-          -d "{\"log\": $LOG}")
-        echo "===== AI CI Agent Response ====="
-        echo "$RESPONSE"
+        echo "CI failed. Triggering CI Bot Agent..."
 
-
-
+        curl -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $GH_TOKEN" \
+          https://api.github.com/repos/vyaspurva20/ci-bot-agent/dispatches \
+          -d '{
+            "event_type": "fix_project_repo",
+            "client_payload": {
+              "repo": "vyaspurva20/recommender-system",
+              "branch": "main",
+              "run_id": "${{ github.run_id }}",
+              "workflow": "CI Agent Test"
+            }
+          }'
