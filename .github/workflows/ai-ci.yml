@@ -42,19 +42,18 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
       run: |
-        echo "CI failed. Triggering CI Bot Agent..."
-
+        LOGS=$(cat error.log | sed 's/"/\\"/g')
         curl -X POST \
           -H "Accept: application/vnd.github+json" \
           -H "Authorization: Bearer $GH_TOKEN" \
           https://api.github.com/repos/vyaspurva20/ci-bot-agent/dispatches \
-          -d '{
-            "event_type": "fix_project_repo",
-            "client_payload": {
-              "repo": "vyaspurva20/recommender-system",
-              "branch": "main",
-              "run_id": "${{ github.run_id }}",
-              "workflow": "CI Agent Test"
-            }
-          }'
+          -d "{
+        \"event_type\": \"fix_project_repo\",
+        \"client_payload\": {
+          \"run_id\": \"${{ github.run_id }}\",
+          \"logs\": \"$LOGS\"
+        }
+        }"
+
+
 
