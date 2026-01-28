@@ -15,7 +15,7 @@ def load_data():
 # This will cause a NameError intentionally
 def recommend_top_movies():
     # Typo function call (error)
-    df = load_dta()   
+    df = load_data()   
     top_movies = df.groupby("movie")["rating"].mean().sort_values(ascending=False)
     print(top_movies)
 
