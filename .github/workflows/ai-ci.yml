@@ -34,8 +34,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
         run: |
-          LOGS=$(cat error.log | sed 's/"/\\"/g')
-
+          echo "Sending CI logs to agent..."
+      
+          LOGS_JSON=$(jq -Rs . error.log)
+      
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -43,9 +45,11 @@ jobs:
             -d "{
               \"event_type\": \"fix_project_repo\",
               \"client_payload\": {
-                \"logs\": \"$LOGS\"
+                \"logs\": $LOGS_JSON
               }
             }"
+
+
 
 
 
