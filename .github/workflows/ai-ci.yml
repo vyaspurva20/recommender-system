@@ -1,4 +1,7 @@
 name: CI Agent Test
+permissions:
+  contents: read
+  actions: write
 
 on:
   push:
@@ -54,3 +57,4 @@ jobs:
               "workflow": "CI Agent Test"
             }
           }'
+
