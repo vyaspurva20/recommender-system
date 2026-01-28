@@ -3,3 +3,5 @@ streamlit
 pytest
 groq
 
+
+django
