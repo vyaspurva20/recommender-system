@@ -24,17 +24,19 @@ jobs:
       # 🔑 THIS STEP CREATES error.log
       - name: Run error.py and capture logs
         run: |
-          python error.py 2>&1 | tee error.log || true
+          set -o pipefail
+          python error.py 2>&1 | tee error.log
+
 
       # 🔑 THIS STEP SENDS logs
       - name: Call CI Bot Agent
         if: failure()
         env:
-            GH_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
         run: |
-            LOGS=$(cat error.log | sed 's/"/\\"/g')
+          LOGS=$(cat error.log | sed 's/"/\\"/g')
 
-            curl -X POST \
+          curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
             https://api.github.com/repos/vyaspurva20/ci-bot-agent/dispatches \
@@ -44,5 +46,6 @@ jobs:
                 \"logs\": \"$LOGS\"
               }
             }"
+
 
 
